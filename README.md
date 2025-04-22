@@ -10,4 +10,4 @@
 | `CFDOMAIN`     | `DOMAIN`                                    | Cloudflare 加速域名，未配置时使用 `DOMAIN`                  |
 | `NAME`         | `JP-webhostmost-GCP`                                | 项目名称，不填会自动获取                            |
 | `PORT`         | `3000`                                      | 服务监听端口                                                 |
-| `TOKEN`        | `sub`                                       | 订阅路径，如 `/sub`                                          |
+| `TOKEN`        | `sub`                                       | 订阅路径，如 `sub`  ，为空时使用UUID                                        |

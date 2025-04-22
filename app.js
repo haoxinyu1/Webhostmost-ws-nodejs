@@ -51,13 +51,13 @@ function getDynamicName() {
         let country = ipData.country || ipData.city || ipData.loc || ipData.ip;
         const hostname = os.hostname();
         if (country) {
-            return `vless-${country}-${hostname}`;
+            return `vl-${hostname}-${country}`;
         } else {
-            return `vless-Unknown-${hostname}`;
+            return `vl-${hostname}-Unknown`;
         }
     } catch (err) {
         console.error("获取动态NAME失败:", err);
-        return `vless-Unknown-${os.hostname()}`;
+        return `vl-${os.hostname()}-Unknown`;
     }
 }
 // 判断系统架构

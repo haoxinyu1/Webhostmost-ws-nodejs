@@ -9,16 +9,15 @@ const { exec, execSync } = require('child_process');
 const { WebSocket, createWebSocketStream } = require('ws');
 const logcb = (...args) => console.log.bind(this, ...args);
 const errcb = (...args) => console.error.bind(this, ...args);
-
-const UUID = process.env.UUID || 'b28f60af-d0b9-4ddf-baaa-7e49c93c380b';
+const UUID = process.env.UUID || 'e49-a';
 const uuid = UUID.replace(/-/g, "");
 const NEZHA_SERVER = process.env.NEZHA_SERVER || 'nezha.gvkoyeb.eu.org';
-const NEZHA_PORT = process.env.NEZHA_PORT || '443'; // 端口为443时自动开启tls
-const NEZHA_KEY = process.env.NEZHA_KEY || ''; // 哪吒三个变量不全不运行
-const DOMAIN = process.env.DOMAIN || '';  // 项目域名或已反代的域名，不带前缀，建议填已反代的域名
-const CFDOMAIN = process.env.CFDOMAIN || DOMAIN;  // CF加速域名
+const NEZHA_PORT = process.env.NEZHA_PORT || '443';        // 端口为443时自动开启tls
+const NEZHA_KEY = process.env.NEZHA_KEY || '';             // 哪吒三个变量不全不运行
+const CFDOMAIN = process.env.CFDOMAIN || '';  //CF加速域名
+const DOMAIN = process.env.DOMAIN || '';  //项目域名或已反代的域名，不带前缀，建议填已反代的域名
 const NAME = process.env.NAME || getDynamicName();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 1006;
 const token = process.env.TOKEN || 'sub';
 
 // 创建HTTP路由
@@ -28,7 +27,9 @@ const httpServer = http.createServer((req, res) => {
         res.end('Hello, World\n');
     } else if (req.url === `/${token}`) {
         const vlessURL = `vless://${UUID}@${CFDOMAIN}:443?encryption=none&security=tls&sni=${DOMAIN}&type=ws&host=${DOMAIN}&path=%2F#${NAME}`;
+
         const base64Content = Buffer.from(vlessURL).toString('base64');
+
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end(base64Content + '\n');
     } else {
@@ -59,8 +60,6 @@ function getDynamicName() {
         return `vless-Unknown-${os.hostname()}`;
     }
 }
-
-
 // 判断系统架构
 function getSystemArchitecture() {
     const arch = os.arch();
@@ -72,25 +71,26 @@ function getSystemArchitecture() {
 }
 
 // 下载对应系统架构的ne-zha
-function downloadFileSync(fileName, fileUrl) {
+function downloadFile(fileName, fileUrl, callback) {
     const filePath = path.join("./", fileName);
     const writer = fs.createWriteStream(filePath);
-    const response = axios({
+    axios({
         method: 'get',
         url: fileUrl,
         responseType: 'stream',
-    }).catch(error => {
-        throw new Error(`Download ${fileName} failed: ${error.message}`);
-    });
-
-    response.data.pipe(writer);
-    writer.on('finish', () => {
-        writer.close();
-        console.log(`Downloaded ${fileName} successfully`);
-    });
+    })
+        .then(response => {
+            response.data.pipe(writer);
+            writer.on('finish', function () {
+                writer.close();
+                callback(null, fileName);
+            });
+        })
+        .catch(error => {
+            callback(`Download ${fileName} failed: ${error.message}`);
+        });
 }
 
-// 下载文件，确保顺序执行
 function downloadFiles() {
     const architecture = getSystemArchitecture();
     const filesToDownload = getFilesForArchitecture(architecture);
@@ -100,13 +100,24 @@ function downloadFiles() {
         return;
     }
 
+    let downloadedCount = 0;
+
     filesToDownload.forEach(fileInfo => {
-        try {
-            downloadFileSync(fileInfo.fileName, fileInfo.fileUrl);
-            authorizeFiles(); // 确保文件下载完才执行授权
-        } catch (error) {
-            console.error(error);
-        }
+        downloadFile(fileInfo.fileName, fileInfo.fileUrl, (err, fileName) => {
+            if (err) {
+                console.log(`Download ${fileName} failed`);
+            } else {
+                console.log(`Download ${fileName} successfully`);
+
+                downloadedCount++;
+
+                if (downloadedCount === filesToDownload.length) {
+                    setTimeout(() => {
+                        authorizeFiles();
+                    }, 3000);
+                }
+            }
+        });
     });
 }
 
@@ -127,34 +138,38 @@ function getFilesForArchitecture(architecture) {
 function authorizeFiles() {
     const filePath = './npm';
     const newPermissions = 0o775;
-    fs.chmodSync(filePath, newPermissions);
-    console.log(`Empowerment success:${newPermissions.toString(8)} (${newPermissions.toString(10)})`);
-
-    // 运行ne-zha
-    let NEZHA_TLS = '';
-    if (NEZHA_SERVER && NEZHA_PORT && NEZHA_KEY) {
-        if (NEZHA_PORT === '443') {
-            NEZHA_TLS = '--tls';
+    fs.chmod(filePath, newPermissions, (err) => {
+        if (err) {
+            console.error(`Empowerment failed:${err}`);
         } else {
-            NEZHA_TLS = '';
-        }
-        const command = `./npm -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} ${NEZHA_TLS} --skip-conn --disable-auto-update --skip-procs --report-delay 4 >/dev/null 2>&1 &`;
-        try {
-            execSync(command); // 使用同步方式执行命令
-            console.log('npm is running');
-        } catch (error) {
-            console.error(`npm running error: ${error}`);
-        }
-    } else {
-        console.log('NEZHA variable is empty, skip running');
-    }
-}
+            console.log(`Empowerment success:${newPermissions.toString(8)} (${newPermissions.toString(10)})`);
 
+            // 运行ne-zha
+            let NEZHA_TLS = '';
+            if (NEZHA_SERVER && NEZHA_PORT && NEZHA_KEY) {
+                if (NEZHA_PORT === '443') {
+                    NEZHA_TLS = '--tls';
+                } else {
+                    NEZHA_TLS = '';
+                }
+                const command = `./npm -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} ${NEZHA_TLS} --skip-conn --disable-auto-update --skip-procs --report-delay 4 >/dev/null 2>&1 &`;
+                try {
+                    exec(command);
+                    console.log('npm is running');
+                } catch (error) {
+                    console.error(`npm running error: ${error}`);
+                }
+            } else {
+                console.log('NEZHA variable is empty,skip running');
+            }
+        }
+    });
+}
 downloadFiles();
 
 // WebSocket 服务器
 const wss = new WebSocket.Server({ server: httpServer });
-wss。on('connection', ws => {
+wss.on('connection', ws => {
     console.log("WebSocket 连接成功");
     ws.on('message', msg => {
         if (msg.length < 18) {
@@ -177,9 +192,12 @@ wss。on('connection', ws => {
             console.log('连接到:', host, port);
             ws.send(new Uint8Array([VERSION, 0]));
             const duplex = createWebSocketStream(ws);
-            net.connect({ host, port, timeout: 3000 }, () => duplex.pipe(duplex));
-        } catch (error) {
-            console.error(error);
+            net.connect({ host, port }, function () {
+                this.write(msg.slice(i));
+                duplex.on('error', err => console.error("E1:", err.message)).pipe(this).on('error', err => console.error("E2:", err.message)).pipe(duplex);
+            }).on('error', err => console.error("连接错误:", err.message));
+        } catch (err) {
+            console.error("处理消息时出错:", err.message);
         }
-    });
+    }).on('error', err => console.error("WebSocket 错误:", err.message));
 });

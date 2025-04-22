@@ -18,7 +18,7 @@ const DOMAIN = process.env.DOMAIN || '';  // 项目域名或已反代的域名�
 const CFDOMAIN = process.env.CFDOMAIN || DOMAIN;  // CF加速域名
 const NAME = process.env.NAME || getDynamicName();
 const port = process.env.PORT || 3000;
-const token = process.env.TOKEN || 'sub';
+const token = process.env.TOKEN || UUID;
 
 // 创建HTTP路由
 const httpServer = http.createServer((req, res) => {

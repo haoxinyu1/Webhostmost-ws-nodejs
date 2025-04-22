@@ -8,6 +8,6 @@
 | `NEZHA_KEY`    | `""`                                        | 哪吒认证密钥，缺失任一哪吒相关变量将不启用监控               |
 | `DOMAIN`       | `""`                                        | 项目主域名或已反代域名（不带 `http(s)://` 前缀）         |
 | `CFDOMAIN`     | `DOMAIN`                                    | Cloudflare 加速域名，未配置时使用 `DOMAIN`                  |
-| `NAME`         | `JP-webhostmost-GCP`                                | 项目名称，用于服务标识或日志展示                            |
+| `NAME`         | `JP-webhostmost-GCP`                                | 项目名称，不填会自动获取                            |
 | `PORT`         | `3000`                                      | 服务监听端口                                                 |
 | `TOKEN`        | `sub`                                       | 订阅路径，如 `/sub`                                          |
